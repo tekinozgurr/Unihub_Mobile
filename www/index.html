@@ -2136,8 +2136,8 @@
             } catch (e) { console.error(e); alert("Hata: " + e.message); }
         }
 
-        // 2. Sınav Takvimi Analizi (SIFIRDAN YAZILMIŞ - BLOK MANTIĞI)
-        // 2. Sınav Takvimi Analizi (GY10001 ve FİLTRE DESTEKLİ)
+        // 3. Sınav Takvimi Analizi (GY1003 VE SINIF:4 AYIRIMLI)
+        // 3. Sınav Takvimi Analizi (TİRE TEMİZLİĞİ YAPILDI)
         function analyzeExamImport() {
             const textRaw = document.getElementById('impText').value;
             const list = document.getElementById('impList');
@@ -2146,10 +2146,10 @@
 
             if (!textRaw || textRaw.length < 5) return alert("Listeyi yapıştırın.");
 
-            // 1. TEMİZLİK
+            // 1. Temizlik
             const text = " " + textRaw.replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ') + " ";
 
-            // 2. TARİH BLOKLARINI BUL
+            // 2. Tarihleri Bul
             const months = { "ocak": "01", "şubat": "02", "mart": "03", "nisan": "04", "mayıs": "05", "haziran": "06", "temmuz": "07", "ağustos": "08", "eylül": "09", "ekim": "10", "kasım": "11", "aralık": "12" };
             const dateRegex = /(\d{1,2})\s+(Ocak|Şubat|Mart|Nisan|Mayıs|Haziran|Temmuz|Ağustos|Eylül|Ekim|Kasım|Aralık)|(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})/gi;
             
@@ -2171,25 +2171,27 @@
                 });
             }
 
-            if (dateMatches.length === 0) return alert("Tarih bulunamadı.");
-
-            let count = 0;
+            if (dateMatches.length === 0) return alert("Tarih formatı algılanamadı.");
             
-            // 3. BLOKLARI İŞLE
+            let count = 0;
+
+            // 3. Blokları İşle
             for (let i = 0; i < dateMatches.length; i++) {
                 const currentDate = dateMatches[i];
                 const nextDateIndex = (i + 1 < dateMatches.length) ? dateMatches[i + 1].index : text.length;
                 const blockContent = text.substring(currentDate.endIndex, nextDateIndex);
-                
-                // 4. SAATLERİ BUL
+
+                // 4. Saatleri Bul
                 const timeRegex = /(\d{1,2}[:.]\d{2})/g;
                 let tm;
                 while ((tm = timeRegex.exec(blockContent)) !== null) {
-                    const nextTimeIndex = blockContent.substring(tm.index + tm[0].length).search(/\d{1,2}[:.]\d{2}/);
-                    const endOfEvent = nextTimeIndex > -1 ? (tm.index + tm[0].length + nextTimeIndex) : blockContent.length;
-                    const rawRow = blockContent.substring(tm.index + tm[0].length, endOfEvent).trim();
+                    const subBlockStart = tm.index + tm[0].length;
+                    const nextTimeMatch = blockContent.substring(subBlockStart).search(/\d{1,2}[:.]\d{2}/);
+                    const subBlockEnd = nextTimeMatch > -1 ? (subBlockStart + nextTimeMatch) : blockContent.length;
                     
-                    // 5. DERS EŞLEŞTİRME
+                    const rawRow = blockContent.substring(subBlockStart, subBlockEnd);
+
+                    // 5. Ders Eşleştirme
                     const foundCourse = courses.find(c => {
                         let code = c.name.split(' ')[0];
                         return rawRow.toLocaleUpperCase('tr-TR').includes(c.name.toLocaleUpperCase('tr-TR')) ||
@@ -2199,35 +2201,32 @@
                     if (foundCourse) {
                         if (parsedCandidates.some(p => p.id === foundCourse.id)) continue;
 
-                        // --- 6. DERSLİK BULMA (GÜÇLENDİRİLMİŞ) ---
-                        // Önce satırdan dersin ismini silelim ki "Matematik 2"deki 2'yi oda sanmasın.
-                        let cleanRow = rawRow.replace(foundCourse.name, "").replace(foundCourse.name.toUpperCase(), "");
-                        
+                        // --- 6. DERSLİK BULMA (TIRAŞLAMALI VERSİYON) ---
                         let room = "";
 
-                        // Kural 1: Etiketli (Yer: GY10001)
-                        const labelMatch = cleanRow.match(/(?:Derslik|Sınıf|Yer|Salon|Amfi|Lab|Oda)[:.\s]+([A-Za-z0-9\-\s]{2,15})/i);
+                        // Etiketli arama (Derslik: GY1001...)
+                        const labelMatch = rawRow.match(/(?:Derslik\/Oda|Derslik|Yer|Salon|Amfi|Lab|Oda)\s*[:]\s*([A-Za-z0-9\-\s]{2,15})/i);
                         
-                        // Kural 2: Kodlu (GY10001, D102, B-205)
-                        // [A-Z]{1,4} -> 1-4 harf (GY, D, LAB)
-                        // \d{2,6} -> 2-6 rakam (10001, 102)
-                        const codeMatch = cleanRow.match(/\b([A-Z]{1,4}[-]?\d{2,6})\b/) || 
-                                          cleanRow.match(/\b(Amfi|Lab|Salon)\s*[-]?\s*(\w+)/i);
+                        // Kodlu arama (GY1001, D102...)
+                        const codeMatch = rawRow.match(/\b(GY\d{3,5}|D\d{3}|[AB]-?\d{3})\b/);
 
                         if (labelMatch) {
-                            room = labelMatch[1].trim();
+                            room = labelMatch[1].trim(); 
                         } else if (codeMatch) {
                             room = codeMatch[0];
-                        } else if (/Online|Uzaktan/i.test(cleanRow)) {
+                        } else if (/Online|Uzaktan/i.test(rawRow)) {
                             room = "Online";
                         }
 
-                        // --- ÇÖP FİLTRESİ ---
-                        // Sadece sayıysa ("2", "4") -> SİL
-                        if (/^\d+$/.test(room)) room = ""; 
-                        // Çok kısaysa -> SİL
-                        if (room.length < 2) room = "";
+                        // --- TIRAŞLAMA İŞLEMİ (YENİ) ---
+                        // Eğer tire varsa, tireden sonrasını at. "GY1001 - D" -> "GY1001" olur.
+                        if (room.includes('-')) {
+                            room = room.split('-')[0].trim();
+                        }
                         
+                        // Çöp temizliği
+                        if (/^\d{1}$/.test(room)) room = ""; // Tek haneli sayıları sil
+
                         count++;
                         parsedCandidates.push({ 
                             type: 'exam', 
@@ -2254,7 +2253,7 @@
                 document.getElementById('btnToggleAll').style.display = 'block'; 
                 updateImpBtn(); 
             } else { 
-                list.innerHTML = `<div style="padding:20px; text-align:center; color:var(--sub)"><div style="font-size:30px; margin-bottom:10px;">🤷‍♂️</div>Sınav bulunamadı.</div>`; 
+                list.innerHTML = `<div style="padding:20px; text-align:center; color:var(--sub)">Sınav bulunamadı.</div>`; 
                 list.style.display = 'block'; 
             }
         }

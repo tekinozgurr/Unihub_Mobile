@@ -1,0 +1,26 @@
+# --- GENEL ---
+/node_modules/
+/dist/
+/.idea/
+/.vscode/
+.DS_Store
+Thumbs.db
+
+# --- ANDROID (Burası Çok Kritik) ---
+# Android Studio'nun senin bilgisayarına özel ürettiği dosyalar
+/android/local.properties
+/android/.gradle/
+/android/build/
+/android/app/build/
+/android/.idea/
+/android/app/*.iml
+/android/*.iml
+
+# --- CAPACITOR ---
+# Eğer 'www' klasörünü otomatik build ile oluşturuyor olsaydın (React/Vue gibi)
+# buraya '/www/' yazardık.
+# AMA DİKKAT: Sen kodlarını elle 'www' içine yazdığın için
+# WWW KLASÖRÜNÜ BURAYA EKLEMİYORUZ. GİTHUB'A GİTMELİ.
+
+# Geçici Capacitor dosyaları
+/android/capacitor.settings.gradle

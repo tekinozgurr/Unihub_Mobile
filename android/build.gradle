@@ -1,0 +1,47 @@
+// Top-level build file where you can add configuration options common to all sub-projects/modules.
+
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.2.1'
+        classpath 'com.google.gms:google-services:4.4.0'
+        // İŞTE ÇÖZÜM BU SATIRDA: 1.9.25 YERİNE 2.1.0 YAPIYORUZ
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:2.1.0"
+    }
+}
+
+apply from: "variables.gradle"
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+task clean(type: Delete) {
+    delete rootProject.buildDir
+}
+
+subprojects {
+    afterEvaluate { project ->
+        if (project.hasProperty("android")) {
+            project.android {
+                compileOptions {
+                    sourceCompatibility JavaVersion.VERSION_17
+                    targetCompatibility JavaVersion.VERSION_17
+                }
+            }
+        }
+    }
+
+    // Kotlin için de hedefi 17 gösteriyoruz ama derleyiciyi güncelledik.
+    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+        kotlinOptions {
+            jvmTarget = "17"
+        }
+    }
+}
