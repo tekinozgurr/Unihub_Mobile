@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>UniHub</title>
-    <meta name="app-version" content="1.0.1">
+    <meta name="app-version" content="1.0.0">
 
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -1458,7 +1458,7 @@
             <button class="btn-backup" onclick="document.getElementById('fileInput').click()"><span>Yedek Yükle</span>
                 <span>⬆</span></button>
             <input type="file" id="fileInput" style="display:none" onchange="restoreBackup(this)">
-            <div class="version-tag">UniHub v1.0.1</div>
+            <div class="version-tag">UniHub v1.0.0</div>
         </div>
     </div>
 
@@ -1468,9 +1468,8 @@
                     onclick="closeChangelog()">×</button></div>
             <div class="changelog-container">
                 <div class="cl-item">
-                    <span class="cl-version" style="color:var(--c1)">v1.0.0 - BÜYÜK BAŞLANGIÇ 🚀</span>
-                    <span class="cl-desc">UniHub artık kararlı sürümde! Özellikler: <br>• 📅 Akıllı Program<br>• ⚡ Hızlı
-                        Etkileşim<br>• 📊 Gelişmiş Takvim<br>• 🔔 Bildirimler<br>• 💾 Yedekleme<br>• 🖼️ Widget</span>
+                    <span class="cl-version" style="color:var(--c1)">v1.0.0</span>
+                    <span class="cl-desc">UniHub yayında! 🚀</span>
                 </div>
             </div>
             <button class="btn-save-modal" onclick="closeChangelog()">Harika!</button>
@@ -1484,7 +1483,7 @@
             alert("HATA VAR!\n\nMesaj: " + message + "\nSatır: " + lineno);
         };
 
-        const CURRENT_VERSION = '1.0.1';
+        const CURRENT_VERSION = '1.0.0';
         let termDates = JSON.parse(localStorage.getItem('term_dates')) || {};
         let isEditMode = false;
         let selectedCourses = new Set();
@@ -1504,23 +1503,54 @@
             return `${y}-${m}-${day}`;
         }
 
-        // --- GÜNCELLEME SİSTEMİ (Tek ve Temiz Hali) ---
+        // --- GÜNCELLEME SİSTEMİ (GITHUB RELEASES UYUMLU) ---
         async function checkUpdate() {
-            const CHECK_URL = "https://raw.githubusercontent.com/tekinozgurr/unihub-updates/main/version.json";
+            // 1. AYARLAR (BURAYI KENDİNE GÖRE DÜZENLE)
+            const GITHUB_USER = "tekinozgurr"; // GitHub kullanıcı adın
+            const GITHUB_REPO = "Unihub_Mobile"; // Repo ismin (Örn: UniHub veya unihub-android)
+            
             try {
+                // Mevcut sürümü meta etiketinden al
                 const currentVer = document.querySelector('meta[name="app-version"]').content;
-                const response = await fetch(CHECK_URL + '?t=' + Date.now()); // Cache engelleme
-                if (!response.ok) return;
+                console.log("Mevcut Sürüm:", currentVer);
+
+                // GitHub API'den son release bilgisini çek
+                const response = await fetch(`https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/releases/latest`);
+                if (!response.ok) return; // İnternet yoksa veya repo gizliyse sessizce çık
 
                 const data = await response.json();
-                console.log("Sunucu Sürümü:", data.version);
+                const latestVer = data.tag_name.replace('v', ''); // "v1.0.2" -> "1.0.2"
+                
+                // APK indirme linkini bul (Assets içindeki .apk uzantılı ilk dosya)
+                const apkAsset = data.assets.find(asset => asset.name.endsWith('.apk'));
+                const downloadUrl = apkAsset ? apkAsset.browser_download_url : data.html_url;
 
-                if (data.version !== currentVer) {
-                    showUpdateModal(data);
+                console.log("GitHub Sürümü:", latestVer);
+
+                // Sürüm karşılaştırma (Eğer GitHub sürümü daha büyükse güncelle)
+                if (compareVersions(latestVer, currentVer) > 0) {
+                    showUpdateModal({
+                        version: latestVer,
+                        notes: data.body || 'Hata düzeltmeleri ve iyileştirmeler.',
+                        downloadUrl: downloadUrl
+                    });
                 }
             } catch (e) {
                 console.log("Güncelleme kontrol hatası:", e);
             }
+        }
+
+        // Yardımcı: Versiyon Karşılaştırıcı (1.0.1 > 1.0.0 gibi)
+        function compareVersions(v1, v2) {
+            const p1 = v1.split('.').map(Number);
+            const p2 = v2.split('.').map(Number);
+            for (let i = 0; i < Math.max(p1.length, p2.length); i++) {
+                const num1 = p1[i] || 0;
+                const num2 = p2[i] || 0;
+                if (num1 > num2) return 1;
+                if (num1 < num2) return -1;
+            }
+            return 0;
         }
 
         function showUpdateModal(data) {
@@ -1534,7 +1564,7 @@
                         <h2 style="margin:5px 0; color:var(--text, #000); font-size:22px;">Yeni Sürüm Var!</h2>
                         <p style="color:var(--c1, #2563eb); font-weight:bold; font-size:18px; margin:5px 0;">v${data.version}</p>
                         <div style="background:var(--bg, #f1f5f9); padding:15px; border-radius:12px; margin:20px 0; text-align:left; font-size:14px; color:var(--sub, #64748b); max-height:100px; overflow-y:auto;">
-                            ${data.notes || 'Hata düzeltmeleri ve iyileştirmeler.'}
+                            ${data.notes.replace(/\n/g, '<br>')}
                         </div>
                         <button onclick="window.open('${data.downloadUrl}', '_system')" style="background:var(--text, #0f172a); color:var(--bg, #fff); border:none; padding:15px; border-radius:12px; font-weight:bold; font-size:16px; width:100%; cursor:pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">HEMEN GÜNCELLE</button>
                         <button onclick="document.getElementById('updateModal').remove()" style="background:transparent; border:none; color:var(--sub, #94a3b8); margin-top:15px; font-size:14px; cursor:pointer;">Sonra Hatırlat</button>
