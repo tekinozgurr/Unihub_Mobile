@@ -1,4 +1,4 @@
-package com.unihub.app; // <-- BURASI SENİN PAKET İSMİNLE AYNI OLMALI
+package com.unihub.app; // <-- BURAYI KENDİ PAKET İSMİNLE DEĞİŞTİRMEYİ UNUTMA
 
 import android.app.PendingIntent;
 import android.appwidget.AppWidgetManager;
@@ -21,10 +21,8 @@ import java.util.Locale;
 public class UniHubWidget extends AppWidgetProvider {
 
     static void updateAppWidget(Context context, AppWidgetManager appWidgetManager, int appWidgetId) {
-        // 1. Arayüzü oluştur
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.uni_hub_widget);
 
-        // 2. Tarihi ve Günü Ayarla
         SimpleDateFormat sdfDay = new SimpleDateFormat("EEEE", new Locale("tr", "TR"));
         SimpleDateFormat sdfDate = new SimpleDateFormat("d MMMM", new Locale("tr", "TR"));
         Date now = new Date();
@@ -32,17 +30,14 @@ public class UniHubWidget extends AppWidgetProvider {
         views.setTextViewText(R.id.appwidget_title, sdfDay.format(now));
         views.setTextViewText(R.id.appwidget_date, sdfDate.format(now));
 
-        // 3. Dosyadan Dersleri Oku
         String courseListText = getCoursesForToday(context);
         views.setTextViewText(R.id.appwidget_text, courseListText);
 
-        // 4. Tıklayınca Uygulamayı Aç
         Intent intent = new Intent(context, MainActivity.class);
         PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         views.setOnClickPendingIntent(R.id.appwidget_text, pendingIntent);
         views.setOnClickPendingIntent(R.id.appwidget_title, pendingIntent);
 
-        // Widget'ı güncelle
         appWidgetManager.updateAppWidget(appWidgetId, views);
     }
 
@@ -61,16 +56,12 @@ public class UniHubWidget extends AppWidgetProvider {
             JSONArray allCourses = new JSONArray(text.toString());
             Calendar calendar = Calendar.getInstance();
 
-            // Java'da Pazar=1, Pzt=2... UniHub'da Pzt=1...Paz=7.
             int javaDay = calendar.get(Calendar.DAY_OF_WEEK);
             int todayUniId = (javaDay == Calendar.SUNDAY) ? 7 : (javaDay - 1);
 
-            // 1. Önce Bugüne Bak
             ArrayList<JSONObject> foundCourses = findCoursesForDay(allCourses, todayUniId);
 
             if (!foundCourses.isEmpty()) {
-                // BUGÜN DERS VAR
-                // Saate göre sırala
                 Collections.sort(foundCourses, (o1, o2) -> o1.optString("t").compareTo(o2.optString("t")));
 
                 for (JSONObject c : foundCourses) {
@@ -90,10 +81,7 @@ public class UniHubWidget extends AppWidgetProvider {
                     sb.append("\n");
                 }
                 return sb.toString().trim();
-            }
-
-            // 2. Bugün Ders Yoksa -> Sonraki Günleri Tara (7 gün ileri git)
-            else {
+            } else {
                 for (int i = 1; i <= 7; i++) {
                     int nextDayId = (todayUniId + i);
                     if (nextDayId > 7) nextDayId = nextDayId % 7;
@@ -113,10 +101,8 @@ public class UniHubWidget extends AppWidgetProvider {
                                 firstClass.optString("n");
                     }
                 }
-
                 return "Bu hafta hiç dersin yok! 🏝️";
             }
-
         } catch (Exception e) {
             return "Hata: " + e.getMessage();
         }

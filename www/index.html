@@ -7,7 +7,7 @@
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
     <title>UniHub</title>
-    <meta name="app-version" content="1.0.1" />
+    <meta name="app-version" content="1.0.2" />
 
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta
@@ -1757,7 +1757,7 @@
           style="display: none"
           onchange="restoreBackup(this)"
         />
-        <div class="version-tag">UniHub v1.0.0</div>
+        <div class="version-tag">UniHub v1.0.2</div>
       </div>
     </div>
 
@@ -1769,13 +1769,9 @@
         </div>
         <div class="changelog-container">
           <div class="cl-item">
-            <span class="cl-version" style="color: var(--c1)">v1.0.1</span>
+            <span class="cl-version" style="color: var(--c1)">v1.0.2</span>
             <span class="cl-desc">
-              ✨ <b>YENİ:</b> Ana Ekran Widget'ı eklendi!<br />
-              🔴 <b>YENİ:</b> Akıllı Yoklama Sistemi (Sınırsız & Dinamik
-              Renk)<br />
-              🚫 <b>YENİ:</b> Ders İptal / Boş Ders seçeneği<br />
-              📅 Vize/Final tarihleri görünümü iyileştirildi.
+              Widget'ın anında güncellenmeme sorunu çözüldü.
             </span>
           </div>
         </div>
@@ -1819,7 +1815,7 @@
         console.log("Hata:", message);
       };
 
-      const CURRENT_VERSION = "1.0.1"; // Versiyonu 1.0.1 yaptık
+      const CURRENT_VERSION = "1.0.2";
       let termDates = JSON.parse(localStorage.getItem("term_dates")) || {};
       let isEditMode = false;
       let selectedCourses = new Set();
