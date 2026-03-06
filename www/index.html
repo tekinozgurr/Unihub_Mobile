@@ -7,7 +7,7 @@
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
     <title>UniHub</title>
-    <meta name="app-version" content="1.0.2" />
+    <meta name="app-version" content="1.0.3" />
 
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta
@@ -1757,7 +1757,7 @@
           style="display: none"
           onchange="restoreBackup(this)"
         />
-        <div class="version-tag">UniHub v1.0.2</div>
+        <div class="version-tag">UniHub v1.0.3</div>
       </div>
     </div>
 
@@ -1767,15 +1767,46 @@
           <span class="modal-title">📜 Gelişim Günlüğü</span>
           <button class="btn-close" onclick="closeChangelog()">×</button>
         </div>
+
         <div class="changelog-container">
           <div class="cl-item">
-            <span class="cl-version" style="color: var(--c1)">v1.0.2</span>
-            <span class="cl-desc">
-              Widget'ın anında güncellenmeme sorunu çözüldü.
-            </span>
+            <div
+              class="cl-version"
+              style="
+                color: var(--c1);
+                font-size: 22px;
+                font-weight: 900;
+                margin-bottom: 15px;
+              "
+            >
+              v1.0.3
+            </div>
+
+            <div
+              class="cl-desc"
+              style="line-height: 1.6; font-size: 14px; color: var(--text)"
+            >
+              <div style="margin-bottom: 10px">
+                📅 <b>YENİ:</b> Takvim üzerinden geçmiş veya gelecek günleri
+                seçip yoklama durumunuzu düzenleyebilirsiniz.
+              </div>
+              <div style="margin-bottom: 10px">
+                🔄 <b>YENİ:</b> İptal edilen dersler, yeni haftaya (Pazartesi)
+                girildiğinde otomatik olarak sıfırlanır.
+              </div>
+              <div style="margin-bottom: 10px">
+                🐛 <b>DÜZELTME:</b> Bildirim çubuğunda hatalı görünen gri/kare
+                ikon sorunu çözüldü.
+              </div>
+            </div>
           </div>
         </div>
-        <button class="btn-save-modal" onclick="closeChangelog()">
+
+        <button
+          class="btn-save-modal"
+          style="margin-top: 15px"
+          onclick="closeChangelog()"
+        >
           Harika!
         </button>
       </div>
@@ -1815,7 +1846,7 @@
         console.log("Hata:", message);
       };
 
-      const CURRENT_VERSION = "1.0.2";
+      const CURRENT_VERSION = "1.0.3";
       let termDates = JSON.parse(localStorage.getItem("term_dates")) || {};
       let isEditMode = false;
       let selectedCourses = new Set();
@@ -1952,8 +1983,6 @@
               id: idCounter++,
               title: "Günaydın! ☀️",
               body: `Bugün ${days[dayId]} ve derslerin var. Programı kontrol et!`,
-              smallIcon: "ic_stat_unihub",
-              iconColor: "#0f172a",
               schedule: {
                 on: {
                   weekday: dayId === 7 ? 1 : dayId + 1,
@@ -2031,6 +2060,7 @@
           }
 
           checkChangelog();
+          checkWeeklyReset();
           refreshUI();
 
           setTimeout(checkUpdate, 3000);
@@ -2465,6 +2495,27 @@
         renderCalendarGrid();
       }
 
+      // TAKVİM ÜZERİNDEN GEÇMİŞ/GELECEK YOKLAMA DÜZENLEME
+      function toggleAbsentForDate(id, dateStr) {
+        const c = courses.find((x) => x.id === id);
+        if (!c) return;
+        if (!c.absentDates) c.absentDates = [];
+
+        const idx = c.absentDates.indexOf(dateStr);
+        if (idx > -1) {
+          // Zaten yoklama girilmiş, SİLİYORUZ (Derse girmiş say)
+          c.absentDates.splice(idx, 1);
+          c.absent--;
+          if (c.absent < 0) c.absent = 0; // Negatife düşmesin
+        } else {
+          // Yoklama girilmemiş, EKLİYORUZ (Derse girmemiş say)
+          c.absentDates.push(dateStr);
+          c.absent++;
+        }
+        saveData();
+        refreshUI(); // Ekranı anında yenile
+      }
+
       function changeMonth(d) {
         calCurrentDate.setMonth(calCurrentDate.getMonth() + d);
         renderCalendarGrid();
@@ -2559,6 +2610,7 @@
         calSelectedDate = new Date(y, m, d);
         renderCalendarGrid();
       }
+
       function renderDayDetail() {
         const det = document.getElementById("calendarDetail");
         const txt = document.getElementById("selectedDateText");
@@ -2576,6 +2628,7 @@
         });
         let hc = false;
 
+        // 1. O GÜNKÜ SINAVLARI GÖSTER
         courses.forEach((c) => {
           if (c.vizeDate === ds) {
             det.innerHTML += `<div class="event-card ec-exam"><div><strong>${c.name}</strong><br><span style="font-size:12px">Vize Sınavı</span></div></div>`;
@@ -2585,12 +2638,9 @@
             det.innerHTML += `<div class="event-card ec-exam"><div><strong>${c.name}</strong><br><span style="font-size:12px">Final Sınavı ${c.examRoom ? "• 📍 " + c.examRoom : ""}</span></div></div>`;
             hc = true;
           }
-          if (c.absentDates && c.absentDates.includes(ds)) {
-            det.innerHTML += `<div class="event-card ec-absent"><div><strong>${c.name}</strong><br><span style="font-size:12px">Derse katılmadın</span></div></div>`;
-            hc = true;
-          }
         });
 
+        // 2. O GÜNKÜ DERSLERİ VE YOKLAMA BUTONLARINI GÖSTER
         let showLessons = true;
         if (
           termDates.v1 &&
@@ -2615,11 +2665,42 @@
             .sort((a, b) => a.time.localeCompare(b.time));
           if (tc.length > 0) {
             tc.forEach((c) => {
-              det.innerHTML += `<div class="event-card ec-lesson"><div><strong>${c.name}</strong><br><span style="font-size:12px">${c.time} • ${c.room || "Derslik Yok"}</span></div></div>`;
+              const isAbsent = c.absentDates && c.absentDates.includes(ds);
+
+              if (isAbsent) {
+                // Derse Girmemiş (Kırmızı Kart ve Geri Al Butonu)
+                det.innerHTML += `
+                <div class="event-card ec-absent" style="justify-content: space-between;">
+                    <div><strong>${c.name}</strong><br><span style="font-size:12px">❌ Derse katılmadın</span></div>
+                    <button onclick="toggleAbsentForDate(${c.id}, '${ds}')" style="background:var(--bg); color:var(--text); border:1px solid var(--border); padding:6px 12px; border-radius:10px; font-weight:bold; font-size:12px; cursor:pointer;">Geri Al</button>
+                </div>`;
+              } else {
+                // Derse Girmiş (Normal Kart ve Yoklama Gir Butonu)
+                det.innerHTML += `
+                <div class="event-card ec-lesson" style="justify-content: space-between;">
+                    <div><strong>${c.name}</strong><br><span style="font-size:12px">⏰ ${c.time} • ${c.room || "Derslik Yok"}</span></div>
+                    <button onclick="toggleAbsentForDate(${c.id}, '${ds}')" style="background:rgba(239, 68, 68, 0.1); color:var(--c4); border:none; padding:6px 12px; border-radius:10px; font-weight:bold; font-size:12px; cursor:pointer;">Yoklama Gir</button>
+                </div>`;
+              }
             });
             hc = true;
           }
-        } else if (!hc) {
+        } else {
+          // Sınav haftasında vs. yanlışlıkla girilmiş yoklamaları silebilmek için görünür yap
+          courses.forEach((c) => {
+            if (c.absentDates && c.absentDates.includes(ds)) {
+              det.innerHTML += `
+                  <div class="event-card ec-absent" style="justify-content: space-between;">
+                      <div><strong>${c.name}</strong><br><span style="font-size:12px">❌ Derse katılmadın (Tatil)</span></div>
+                      <button onclick="toggleAbsentForDate(${c.id}, '${ds}')" style="background:var(--bg); color:var(--text); border:1px solid var(--border); padding:6px 12px; border-radius:10px; font-weight:bold; font-size:12px; cursor:pointer;">Geri Al</button>
+                  </div>`;
+              hc = true;
+            }
+          });
+        }
+
+        // 3. EĞER HİÇBİR ŞEY YOKSA
+        if (!hc) {
           let reason = "Ders yok";
           if (termDates.start && ds < termDates.start)
             reason = "Dönem başlamadı ⏳";
@@ -2628,12 +2709,7 @@
           else if (!showLessons) reason = "Sınav Haftası 📚";
 
           det.innerHTML = `<div style="text-align:center; color:var(--sub); margin-top:20px; font-weight:600">${reason}</div>`;
-          return;
         }
-
-        if (!hc)
-          det.innerHTML =
-            '<div style="text-align:center; color:var(--sub); margin-top:20px;">Etkinlik yok.</div>';
       }
 
       function renderGrades() {
@@ -3303,6 +3379,22 @@
         localStorage.setItem("term_dates", JSON.stringify(termDates));
         alert("Takvim güncellendi! Widget ve Program yenileniyor... 🔄");
         refreshUI();
+      }
+
+      function checkWeeklyReset() {
+        const now = new Date();
+        const d = now.getDay() === 0 ? 7 : now.getDay();
+        const monday = new Date(now);
+        monday.setDate(now.getDate() - d + 1);
+        const currentWeekStart = getLcDateStr(monday);
+
+        const lastWeek = localStorage.getItem("last_week_start");
+        if (lastWeek && lastWeek !== currentWeekStart) {
+          // Yeni haftaya girilmiş! Tüm iptalleri kaldır.
+          courses.forEach((c) => (c.isCancelled = false));
+          saveData();
+        }
+        localStorage.setItem("last_week_start", currentWeekStart);
       }
 
       init();
